@@ -43,13 +43,14 @@ module Bugzilla
   register_for_assigned_pk([User, Project, Issue, IssueCategory, Attachment, Version])
 
   # Bugzilla database settings
+  # Edit for your own installation
   @@bugzilla_db_params = {
     :adapter => 'mysql',
     :database => 'bugzilla',
-    :host => 'bugzilla.lan.i-tech.si',
+    :host => 'bugzilla.my.host',
     :port => 3306,
-    :username => 'bugzilla1',
-    :password => 'bugzilla1',
+    :username => 'bugzilla-user',
+    :password => 'bugzilla-pwd',
     :encoding => 'utf8'}
 
   DEFAULT_STATUS = IssueStatus.default
