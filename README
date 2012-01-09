@@ -20,6 +20,7 @@ Copy the script to <redmine>/app/helpers.
 * copies bug description and author
 * copies bug comments
 * does NOT copy attachments, but add comments with links to Bugzilla
+* does NOT preserve bug dependencies
 * copies Bugzilla CC as watchers
 * adds a comment and custom field to Redmine issue to mark the origin
 * adds a comment and custom field to Bugzilla bug to mark the target
