@@ -47,7 +47,7 @@ module Bugzilla
   @@bugzilla_db_params = {
     :adapter => 'mysql',
     :database => 'bugzilla',
-    :host => 'bugzilla.my.host',
+    :host => 'bugzilla.mysql.server',
     :port => 3306,
     :username => 'bugzilla-user',
     :password => 'bugzilla-pwd',
@@ -108,6 +108,9 @@ module Bugzilla
   }
 
   BUGZILLA_ID_FIELDNAME = "Bugzilla-Task"
+  
+  BUGZILLA_URL="http://bugzilla.my.host"
+  REDMINE_URL="http://redmine.my.host"
 
 # ---- Bugzilla database records ----
      
@@ -390,7 +393,7 @@ def self.bugs_to_issues(proj_name, bugs)
       :notes => "
 *Issue imported from Bugzilla.*
 
-Original Bugzilla ID: \"Task #{bug.id}\":https://bugzilla.lan.i-tech.si/show_bug.cgi?id=#{bug.id}
+Original Bugzilla ID: \"Task #{bug.id}\":#{BUGZILLA_URL}/show_bug.cgi?id=#{bug.id}
 "
     )
     journal.save!
@@ -401,7 +404,7 @@ Original Bugzilla ID: \"Task #{bug.id}\":https://bugzilla.lan.i-tech.si/show_bug
       journal = Journal.new(
       :journalized => issue,
       :user => map_user(att.submitter_id) || issue.author,
-      :notes => "*Bugzilla attachment*: \"#{att.description}\":https://bugzilla.lan.i-tech.si/attachment.cgi?id=#{att.id}&action=edit",
+      :notes => "*Bugzilla attachment*: \"#{att.description}\":#{BUGZILLA_URL}/attachment.cgi?id=#{att.id}&action=edit",
       :created_on => att.creation_ts
       )
       journal.save!
@@ -415,7 +418,7 @@ Original Bugzilla ID: \"Task #{bug.id}\":https://bugzilla.lan.i-tech.si/show_bug
       :bug_when => Time.current,
       :who => bug.reporter,
       :thetext => "
-*Task moved to Redmine.* http://10.0.0.105/issues/#{issue.id}
+*Task moved to Redmine.* #{REDMINE_URL}/issues/#{issue.id}
 
 Please do not add comments here any more.
 "
@@ -423,7 +426,7 @@ Please do not add comments here any more.
     if !bz_comment.save
       puts "Can't add comment to Bugzilla."
     end
-    bug.cf_redmine_issue = "http://10.0.0.105/issues/#{issue.id}"
+    bug.cf_redmine_issue = "#{REDMINE_URL}/issues/#{issue.id}"
     bug.save
 
     # Additionally save the original bugzilla bug ID as custom field value.

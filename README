@@ -1,0 +1,59 @@
+
+This is a Ruby on Rails helper script for Redmine to copy bugs from Bugzilla to
+Redmine.
+
+The script is intended to be used in situations when bugs are moved to Redmine
+selectivelly (in contrast to migrate_from_bugzilla, which is intended for
+moving all tasks at once).
+
+Helper was inspired by and is based on:
+
+https://github.com/ralli/migrate_from_bugzilla.
+
+== Installation ==
+
+Copy the script to <redmine>/app/helpers.
+
+== Features ==
+
+* attempts to map users based on email and extern ID (LDAP)
+* copies bug description and author
+* copies bug comments
+* does NOT copy attachments, but add comments with links to Bugzilla
+* copies Bugzilla CC as watchers
+* adds a comment and custom field to Redmine issue to mark the origin
+* adds a comment and custom field to Bugzilla bug to mark the target
+* skips bugs that were already copied
+
+== Usage ==
+
+IMPORTANT:
+  Make sure that you create backup of Redmine database before using the helper.
+
+1. Start Rails console
+
+script/console production
+
+2. Copy bugs to target project
+
+Bugzilla.copy_to takes two parameters:
+* Redmine project identifier
+* Array of Bugzilla tasks to migrate
+
+Bugzilla.copy_to "almighty-project", [3311, 3322, 3233]
+
+The command shows verbose messages while copying migration. Tasks that were
+already migrated are skipped.
+
+3. Tips:
+
+The following Rails queries can be useful to get the list of tasks in the
+Rails console:
+
+# Connect to Bugzilla
+Bugzilla.establish_connection
+
+# Query the product to get the id (will be shown in the output)
+Bugzilla::BzProduct.find_by_name("TheBugzillaProduct")
+Bugzilla::BzBug.find(:all, :conditions => ["product_id = ? and bug_status = 'NEW'", 24]).collect {|b| b.id }
+
