@@ -55,32 +55,36 @@ module Bugzilla
 
   DEFAULT_STATUS = IssueStatus.default
   CLOSED_STATUS = IssueStatus.find :first, :conditions => { :is_closed => true }
-  assigned_status = IssueStatus.find_by_position(2)
-  resolved_status = IssueStatus.find_by_position(3)
-  feedback_status = IssueStatus.find_by_position(4)
+  assigned_status = IssueStatus.find_by_name("In Progress") || DEFAULT_STATUS
+  resolved_status = IssueStatus.find_by_name("Resolved") || DEFAULT_STATUS
+  feedback_status = IssueStatus.find_by_position("Waiting for feedback") || DEFAULT_STATUS
 
   STATUS_MAPPING = {
     "UNCONFIRMED" => DEFAULT_STATUS,
     "NEW" => DEFAULT_STATUS,
-    "VERIFIED" => DEFAULT_STATUS,
+    "VERIFIED" => CLOSED_STATUS,
     "ASSIGNED" => assigned_status,
     "REOPENED" => assigned_status,
     "RESOLVED" => resolved_status,
     "CLOSED" => CLOSED_STATUS
   }
 
-  priorities = IssuePriority.all(:order => 'position')
+  DEFAULT_PRIORITY = IssuePriority.default
+  immediate_prio = IssuePriority.find_by_name("Immediate") || DEFAULT_PRIORITY
+  essential_prio = IssuePriority.find_by_name("Essential") || DEFAULT_PRIORITY
+  important_prio = IssuePriority.find_by_name("Important") || DEFAULT_PRIORITY
+  optional_prio = IssuePriority.find_by_name("Optional") || DEFAULT_PRIORITY
+  low_prio = IssuePriority.find_by_name("Low") || DEFAULT_PRIORITY
   PRIORITY_MAPPING = {
-    "P5" => priorities[1], # low
-    "P4" => priorities[2], # normal
-    "P3" => priorities[3], # high
-    "P2" => priorities[4], # urgent
-    "P1" => priorities[5]  # immediate
+    "P5" => low_prio,
+    "P4" => optional_prio,
+    "P3" => important_prio,
+    "P2" => essential_prio,
+    "P1" => immediate_prio
   }
-  DEFAULT_PRIORITY = PRIORITY_MAPPING["P4"]
 
-  TRACKER_BUG = Tracker.find_by_position(1)
-  TRACKER_FEATURE = Tracker.find_by_position(2)
+  TRACKER_BUG = Tracker.find_by_name("Bug")
+  TRACKER_FEATURE = Tracker.find_by_name("Feature")
 
   reporter_role = Role.find_by_position(5)
   developer_role = Role.find_by_position(4)
@@ -317,15 +321,18 @@ end
 def self.bugs_to_issues(proj_name, bugs)
   migrated = []
 
-  projects = Project.find(:all, :conditions => ["identifier = ?", proj_name])
-  if projects.size != 1
+  proj = Project.find_by_identifier(proj_name)
+  if !proj
     print "Unknown Redmine project name: #{proj_name}"
-    return
+    return migrated
   end
-  proj = projects[0]
-  
-  # TODO: Use manager as the default user
-  default_user = proj.principals[0] || nil
+
+  mgr_role = Role.find_by_name("Manager") 
+  mgrs = proj.users_by_role[mgr_role]
+
+  default_user = mgrs[0] || proj.principals[0]
+
+  puts " Project: #{proj.identifier}, #{proj}: #{default_user} "
 
   custom_field = IssueCustomField.find_by_name(BUGZILLA_ID_FIELDNAME)
 
@@ -333,7 +340,7 @@ def self.bugs_to_issues(proj_name, bugs)
 
     bug = BzBug.find(b)
     if (bug == nil)
-      print "Unknown Bugzilla task: #{b}"
+      puts "Unknown Bugzilla task: #{b}"
       next
     end
 
@@ -372,14 +379,14 @@ def self.bugs_to_issues(proj_name, bugs)
     issue.assigned_to_id = map_user(bug.assigned_to) || default_user unless bug.assigned_to.blank?
 
     issue.save!
-    puts " Task #{bug.id} --> Redmine issue ##{issue.id}"
+    puts " Task #{bug.id} --> Redmine issue ##{issue.id}: #{issue.status}, #{issue.priority}"
 
     bug.descriptions.each do |description|
       # the first comment is already added to the description field of the bug
       next if description === bug.descriptions.first
       journal = Journal.new(
         :journalized => issue,
-        :user => map_user(description.who) || default_user,
+        :user => map_user(description.who) || author,
         :notes => description.text,
         :created_on => description.bug_when
       )
@@ -389,7 +396,7 @@ def self.bugs_to_issues(proj_name, bugs)
     # Add a journal entry to capture the original bugzilla bug ID
     journal = Journal.new(
       :journalized => issue,
-      :user_id => 1,
+      :user => default_user,
       :notes => "
 *Issue imported from Bugzilla.*
 
