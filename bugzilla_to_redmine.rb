@@ -330,7 +330,11 @@ def self.bugs_to_issues(proj_name, bugs)
   mgr_role = Role.find_by_name("Manager") 
   mgrs = proj.users_by_role[mgr_role]
 
-  default_user = mgrs[0] || proj.principals[0]
+  if mgrs && !mgrs.empty?
+    default_user = mgrs[0]
+  else
+    default_user = proj.principals[0]
+  end
 
   puts " Project: #{proj.identifier}, #{proj}: #{default_user} "
 
